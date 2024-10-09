@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/telebot.v3"
 	"strings"
+	"tg-botv1/internal/ai"
 	"tg-botv1/internal/gaspump"
 	"time"
 )
@@ -13,6 +14,7 @@ const TG_KEY = "7720831150:AAGLDfKOHarhRpKP73xakKkddbDKYzj6S4A"
 type Bot struct {
 	bot *telebot.Bot
 	gp  *gaspump.Client
+	ai  *ai.Client
 }
 
 func New() (*Bot, error) {
@@ -37,46 +39,37 @@ func (b *Bot) Start() {
 	b.bot.Start()
 }
 
-func (b *Bot) CommentCA(c telebot.Context, ca string) ([]string, error) {
-	cm, err := b.gp.GetComments(ca)
-	if err != nil {
-		return nil, fmt.Errorf("Не удалось получить комментарии: %v", err)
-	}
-
-	return cm, nil
-}
-
-func (b *Bot) ParseArgs(c telebot.Context) (string, error) {
+func (b *Bot) ParseArgsComments(c telebot.Context) (string, error) {
 	args := c.Args()
 	if len(args) < 1 {
 		return "", c.Send("Пожалуйста, укажите адрес смарт-контракта")
 	}
 
-	contractAdress := args[0]
-	if !strings.Contains(contractAdress, "EQ") {
+	contractAddress := args[0]
+	if !strings.Contains(contractAddress, "EQ") {
 		return "", c.Send("Укажите правильный адрес смарт-контракта")
 	}
 
-	return contractAdress, nil
+	return contractAddress, nil
 
 }
 
 func (b *Bot) SendComments(c telebot.Context) error {
-	contractAdress, err := b.ParseArgs(c)
+	contractAddress, err := b.ParseArgsComments(c)
 	if err != nil {
 		return err
 	}
 
-	comments, err := b.CommentCA(c, contractAdress)
+	comments, err := b.gp.GetComments(contractAddress)
 	if err != nil {
 		return c.Send(fmt.Sprintf("Произошла ошибка при получении комментариев: %v", err))
 	}
 
+	var sb strings.Builder
+	sb.WriteString("Все комментарии: \n\n")
 	for _, comment := range comments {
-		if err := c.Send(comment); err != nil {
-			return fmt.Errorf("Ошибка при отправке сообщения: %v", err)
-		}
+		sb.WriteString(comment)
 	}
 
-	return nil
+	return c.Send(sb.String())
 }
