@@ -69,7 +69,7 @@ func (b *Bot) SendComments(c telebot.Context) error {
 
 	comments, err := b.CommentCA(c, contractAdress)
 	if err != nil {
-		return c.Send(err)
+		return c.Send(fmt.Sprintf("Произошла ошибка при получении комментариев: %v", err))
 	}
 
 	for _, comment := range comments {
