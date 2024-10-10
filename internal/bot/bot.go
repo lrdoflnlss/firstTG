@@ -28,9 +28,15 @@ func New() (*Bot, error) {
 		return nil, err
 	}
 
-	bot := &Bot{bot: b}
+	aiClient, err := ai.New()
+	if err != nil {
+		return nil, err
+	}
+
+	bot := &Bot{bot: b, ai: aiClient}
 
 	b.Handle("/comment", bot.SendComments)
+	b.Handle("/review", bot.HandleReviewCA)
 
 	return bot, nil
 }
@@ -46,7 +52,7 @@ func (b *Bot) ParseArgsComments(c telebot.Context) (string, error) {
 	}
 
 	contractAddress := args[0]
-	if !strings.Contains(contractAddress, "EQ") {
+	if !strings.HasPrefix(contractAddress, "EQ") {
 		return "", c.Send("Укажите правильный адрес смарт-контракта")
 	}
 
@@ -62,7 +68,7 @@ func (b *Bot) SendComments(c telebot.Context) error {
 
 	comments, err := b.gp.GetComments(contractAddress)
 	if err != nil {
-		return c.Send(fmt.Sprintf("Произошла ошибка при получении комментариев: %v", err))
+		return fmt.Errorf("Произошла ошибка при получении комментариев: %v", err)
 	}
 
 	var sb strings.Builder
@@ -72,4 +78,23 @@ func (b *Bot) SendComments(c telebot.Context) error {
 	}
 
 	return c.Send(sb.String())
+}
+
+func (b *Bot) HandleReviewCA(c telebot.Context) error {
+	contractAddress, err := b.ParseArgsComments(c)
+	if err != nil {
+		return err
+	}
+
+	comments, err := b.gp.GetComments(contractAddress)
+	if err != nil {
+		return fmt.Errorf("Произошла ошибка при получении комментариев: %v", err)
+	}
+
+	aiResp, err := b.ai.ReviewComments(comments)
+	if err != nil {
+		return err
+	}
+
+	return c.Send(aiResp)
 }
