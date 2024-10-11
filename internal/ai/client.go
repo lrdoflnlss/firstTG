@@ -2,12 +2,15 @@ package ai
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"github.com/sashabaranov/go-openai"
+	"os"
 	"strings"
 )
 
-const API_KEY = "4&L^%JbNxw^D9:C"
+var (
+	ErrNoResponse = errors.New("no choices found")
+)
 
 var instructions = "Твоя задача смешно подстебывать криптокидов насчет их дебильных комментариев, можешь использовать свободный стиль и изощряться как хочешь"
 
@@ -16,7 +19,7 @@ type Client struct {
 }
 
 func New() (*Client, error) {
-	client := openai.NewClient(API_KEY)
+	client := openai.NewClient(os.Getenv("AI_KEY"))
 
 	return &Client{ai: client}, nil
 }
@@ -28,11 +31,11 @@ func (c *Client) ReviewComments(comments []string) (string, error) {
 			Model: openai.GPT3Dot5Turbo,
 			Messages: []openai.ChatCompletionMessage{
 				{
-					Role:    openai.ChatMessageRoleUser,
+					Role:    openai.ChatMessageRoleSystem,
 					Content: instructions,
 				},
 				{Role: openai.ChatMessageRoleUser,
-					Content: strings.Join(comments, " ")}, //или лучше через builder
+					Content: strings.Join(comments, " ")},
 			},
 		},
 	)
@@ -42,7 +45,7 @@ func (c *Client) ReviewComments(comments []string) (string, error) {
 	}
 
 	if len(resp.Choices) == 0 {
-		return "", fmt.Errorf("No choices found\n")
+		return "", ErrNoResponse
 	}
 
 	return resp.Choices[0].Message.Content, nil

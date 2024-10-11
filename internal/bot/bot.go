@@ -3,13 +3,14 @@ package bot
 import (
 	"fmt"
 	"gopkg.in/telebot.v3"
+	"gopkg.in/telebot.v3/middleware"
+	"log"
+	"os"
 	"strings"
 	"tg-botv1/internal/ai"
 	"tg-botv1/internal/gaspump"
 	"time"
 )
-
-const TG_KEY = "7720831150:AAGLDfKOHarhRpKP73xakKkddbDKYzj6S4A"
 
 type Bot struct {
 	bot *telebot.Bot
@@ -19,8 +20,9 @@ type Bot struct {
 
 func New() (*Bot, error) {
 	pref := telebot.Settings{
-		Token:  TG_KEY,
-		Poller: &telebot.LongPoller{Timeout: 10 * time.Second},
+		Token:   os.Getenv("TG_KEY"),
+		Poller:  &telebot.LongPoller{Timeout: 10 * time.Second},
+		OnError: OnError,
 	}
 
 	b, err := telebot.NewBot(pref)
@@ -35,6 +37,10 @@ func New() (*Bot, error) {
 
 	bot := &Bot{bot: b, ai: aiClient}
 
+	b.Use(middleware.Recover())
+	b.Use(Logger())
+	b.Use(middleware.AutoRespond())
+
 	b.Handle("/comment", bot.SendComments)
 	b.Handle("/review", bot.HandleReviewCA)
 
@@ -42,6 +48,7 @@ func New() (*Bot, error) {
 }
 
 func (b *Bot) Start() {
+	log.Println("Bot started:", b.bot.Me.Username)
 	b.bot.Start()
 }
 
@@ -68,12 +75,13 @@ func (b *Bot) SendComments(c telebot.Context) error {
 
 	comments, err := b.gp.GetComments(contractAddress)
 	if err != nil {
-		return fmt.Errorf("Произошла ошибка при получении комментариев: %v", err)
+		return fmt.Errorf("произошла ошибка при получении комментариев: %v", err)
 	}
 
 	var sb strings.Builder
-	sb.WriteString("Все комментарии: \n\n")
+	sb.WriteString("Все комментарии: ")
 	for _, comment := range comments {
+		sb.WriteString("\n\n")
 		sb.WriteString(comment)
 	}
 
@@ -88,7 +96,7 @@ func (b *Bot) HandleReviewCA(c telebot.Context) error {
 
 	comments, err := b.gp.GetComments(contractAddress)
 	if err != nil {
-		return fmt.Errorf("Произошла ошибка при получении комментариев: %v", err)
+		return fmt.Errorf("произошла ошибка при получении комментариев: %v", err)
 	}
 
 	aiResp, err := b.ai.ReviewComments(comments)

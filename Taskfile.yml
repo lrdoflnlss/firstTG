@@ -1,0 +1,12 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - echo $TG_KEY
+      - echo $AI_KEY
+    silent: true
+
+  run: go run ./cmd/bot/... -c ./configs/local.env
