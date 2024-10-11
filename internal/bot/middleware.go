@@ -2,23 +2,24 @@ package bot
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	tele "gopkg.in/telebot.v3"
-	"log"
 )
 
-func Logger() tele.MiddlewareFunc {
+func Logger(log *logrus.Logger) tele.MiddlewareFunc {
 	return func(next tele.HandlerFunc) tele.HandlerFunc {
 		return func(c tele.Context) error {
 			data := fmt.Sprintf("%v: %v", c.Sender().Username, c.Message().Text)
-			log.Println(data)
+			log.Info(data)
 
 			return next(c)
 		}
 	}
 }
 
-func OnError(err error, c tele.Context) {
-	log.Println("[ERROR]:", err)
-
-	_ = c.Send("Произошла ошибка")
+func OnErrorWithLogger(log *logrus.Logger) func(err error, c tele.Context) {
+	return func(err error, c tele.Context) {
+		log.Errorf("[ERROR]: %v", err)
+		_ = c.Send("Произошла ошибка")
+	}
 }
