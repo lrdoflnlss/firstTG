@@ -3,13 +3,15 @@ package main
 import (
 	"flag"
 	"github.com/joho/godotenv"
-	"log"
 	"tg-botv1/internal/bot"
+	"tg-botv1/internal/logger"
 )
 
 var configPath = flag.String("c", ".env", "Path to config")
 
 func main() {
+	log := logger.New()
+
 	flag.Parse()
 
 	err := godotenv.Load(*configPath)
