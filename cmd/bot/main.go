@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"github.com/joho/godotenv"
+	"os"
+	"os/signal"
+	"syscall"
 	"tg-botv1/internal/bot"
 	"tg-botv1/internal/logger"
 )
@@ -10,9 +14,10 @@ import (
 var configPath = flag.String("c", ".env", "Path to config")
 
 func main() {
-	log := logger.New()
-
 	flag.Parse()
+	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+
+	log := logger.New()
 
 	err := godotenv.Load(*configPath)
 	if err != nil {
@@ -24,5 +29,5 @@ func main() {
 		log.Fatalf("Ошибка инициализации: %v\n", err)
 	}
 
-	b.Start()
+	b.Start(ctx)
 }
